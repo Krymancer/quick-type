@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap"
+      rel="stylesheet"
+    />
+    <title>Quick-Type</title>
+  </head>
+  <body
+    class="font-inter mx-auto w-screen h-screen flex items-center justify-center flex-col gap-4"
+  >
+    <h1 class="text-2xl font-bold">Quick Type</h1>
+    <div class="flex flex-col gap-2">
+      <input id="code" placeholder="Enter a code" />
+      <div class="flex gap-2">
+        <button id="join" class="bg-[#cba6f7] p-2 rounded-lg">Join</button>
+        <button id="create" class="bg-[#a6e3a1] p-2 rounded-lg">
+          Create a room
+        </button>
+      </div>
+    </div>
+  </body>
+  <script>
+    const join = document.getElementById("join");
+    const create = document.getElementById("create");
+    const code = document.getElementById("code");
+
+    join.addEventListener("click", () => {
+      const room = code.value;
+      window.location = room;
+    });
+  </script>
+</html>
