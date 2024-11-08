@@ -1,5 +1,7 @@
 import http from "http";
 import crypto from "crypto";
+import fs from 'fs';
+import path from 'path';
 
 import { decode, encode, generateAcceptValue } from './websocket.js';
 import { handleStaticFiles } from "./static.js";
@@ -67,6 +69,27 @@ server.on('upgrade', (request, socket, head) => {
     const message = decode(buffer);
     if (message) {
       console.log(`Received message: ${message}`);
+
+      const room = message.substring(1);
+
+      const exists = false;
+
+      rooms.forEach(room => {
+        if (room.id == room) {
+          room.clients.push(socket);
+          exists = true;
+        }
+      });
+
+      if (!exists) {
+        rooms.push({
+          id: room,
+          clients: [socket]
+        });
+      }
+
+      console.log("create room", rooms);
+
       broadcast(message, socket);
     }
   });
