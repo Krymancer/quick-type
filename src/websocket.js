@@ -2,6 +2,13 @@ import crypto from 'crypto';
 
 // See: https://www.rfc-editor.org/rfc/rfc6455
 
+export const clients = [];
+
+/**
+ * 
+ * @param {*} buffer 
+ * @returns 
+ */
 export function decode(buffer) {
   const secondByte = buffer[1];
   const length = secondByte & 127;
@@ -32,6 +39,19 @@ export function encode(message) {
   else frame.push(127, 0, 0, 0, 0, (length >> 24) & 255, (length >> 16) & 255, (length >> 8) & 255, length & 255);
 
   return Buffer.concat([Buffer.from(frame), messageBuffer]);
+}
+
+export function broadcast(message, socket) {
+  console.log('broadcast', { message, socket, clients })
+  clients.forEach((client) => {
+    if (client !== socket && client.readyState === client.OPEN) {
+      sendMessage(message, client);
+    }
+  });
+}
+
+export function sendMessage(message, client) {
+  client.send(encode(message));
 }
 
 export function generateAcceptValue(acceptKey) {

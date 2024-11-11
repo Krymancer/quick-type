@@ -3,13 +3,12 @@ import crypto from "crypto";
 import fs from 'fs';
 import path from 'path';
 
-import { decode, encode, generateAcceptValue } from './websocket.js';
 import { handleStaticFiles } from "./static.js";
+import { decode, encode, generateAcceptValue, clients } from './websocket.js';
+import { broadcastRooms, getRoomByClient, rooms } from "./room.js";
 
 const PORT = 3000;
-const clients = [];
 const words = ["apple", "banana", "cherry", "date", "elderberry", "fig", "grape", "honeydew"];
-const rooms = [];
 
 const server = http.createServer((request, response) => {
   let filePath = path.join(process.cwd(), 'public', request.url === '/' ? 'index.html' : request.url);
@@ -63,56 +62,43 @@ server.on('upgrade', (request, socket, head) => {
   ];
   socket.write(responseHeaders.join('\r\n') + '\r\n\r\n');
 
+  console.log('connection')
+
   clients.push(socket);
+
+  // Send initial room list to the new client
+  broadcastRooms(socket);
 
   socket.on('data', (buffer) => {
     const message = decode(buffer);
     if (message) {
       console.log(`Received message: ${message}`);
 
-      const room = message.substring(1);
+      // Parse the message to determine the room command
+      const [command, roomId] = message.split(' ');
 
-      const exists = false;
-
-      rooms.forEach(room => {
-        if (room.id == room) {
-          room.clients.push(socket);
-          exists = true;
+      if (command === 'join') {
+        joinRoom(roomId, socket);
+        broadcastRooms(); // Update all clients with the latest room list
+      } else if (command === 'leave') {
+        leaveRoom(roomId, socket);
+        broadcastRooms(); // Update all clients with the latest room list
+      } else {
+        // Broadcast within the room only
+        const clientRoom = getRoomByClient(socket);
+        if (clientRoom) {
+          broadcastToRoom(clientRoom.id, message, socket);
         }
-      });
-
-      if (!exists) {
-        rooms.push({
-          id: room,
-          clients: [socket]
-        });
       }
-
-      console.log("create room", rooms);
-
-      broadcast(message, socket);
     }
   });
 
-  socket.on('end', () => console.log('Client disconnected'));
+  socket.on('end', () => {
+    console.log('Client disconnected');
+    removeClientFromRooms(socket);
+    broadcastRooms(); // Update all clients with the latest room list after a disconnect
+  });
 });
 
-
-function broadcast(message, senderSocket) {
-  clients.forEach((client) => {
-    if (client !== senderSocket && client.readyState === client.OPEN) {
-      client.send(encode(message));
-    }
-  });
-}
-
-function sendRandomWord() {
-  const word = words[Math.floor(Math.random() * words.length)];
-  clients.forEach((client) => {
-    client.write(encode(word));
-  });
-}
-
-setInterval(sendRandomWord, 3000);
 
 server.listen(PORT, () => console.log(`Server running on port ${PORT}`));
