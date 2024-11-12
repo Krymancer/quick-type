@@ -1,107 +1,29 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap"
-      rel="stylesheet"
-    />
-    <title>Quick-Type</title>
-  </head>
-  <body
-    class="font-inter mx-auto w-screen h-screen flex items-center justify-center flex-col gap-4"
-  >
-    <h1 class="text-2xl font-bold">Quick Typeeee</h1>
-    <div class="flex flex-col gap-2">
-      <div id="room-list"></div>
-      <input id="code" placeholder="Enter a code" />
-      <div class="flex gap-2">
-        <button id="join" class="bg-[#cba6f7] p-2 rounded-lg">Join</button>
-        <button id="create" class="bg-[#a6e3a1] p-2 rounded-lg">
-          Create a room
-        </button>
-      </div>
-    </div>
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap"
+    rel="stylesheet" />
+  <title>Quick-Type</title>
+</head>
+
+<body
+  class="font-inter mx-auto w-screen h-screen flex items-center justify-center flex-col gap-4 bg-[#1e1e2e] overflow-hidden">
+  <h1 class="text-2xl font-bold">Quick Type</h1>
+  <div class="flex flex-col gap-2">
+    <div id="room-list" class="grid grid-cols-4 gap-2 max-w-2xl"></div>
     <div id="log"></div>
-  </body>
-  <script>
-    const join = document.getElementById("join");
-    const create = document.getElementById("create");
-    const code = document.getElementById("code");
+  </div>
+  <div class="flex flex-col">
+    <button onclick="createRoom()" class="bg-red-600 p-2 rounded-md">Create Room</button>
+  </div>
+</body>
+<script src="client.js"></script>
 
-    const ws = new WebSocket(`ws://${window.location.host}`);
-    const roomListContainer = document.getElementById("room-list");
-    const logContainer = document.getElementById("log");
-    let currentRoom = null; // Track the current room the client is in
-
-    ws.onopen = () => {
-      console.log("Connected to server");
-    };
-
-    ws.onmessage = (event) => {
-      console.log(event.data);
-      const data = JSON.parse(event.data);
-
-      if (data.type === "ROOM_LIST") {
-        updateRoomList(data.rooms);
-      } else {
-        displayLog(data.message);
-      }
-    };
-
-    ws.onclose = () => {
-      console.log("Disconnected from server");
-    };
-
-    // Update room list display
-    function updateRoomList(rooms) {
-      roomListContainer.innerHTML = ""; // Clear existing room list
-
-      rooms.forEach((room) => {
-        const roomItem = document.createElement("li");
-        roomItem.textContent = `${room.name} (Players: ${room.players}/${room.capacity})`;
-        roomListContainer.appendChild(roomItem);
-      });
-    }
-
-    // Display messages in the log
-    function displayLog(message) {
-      const logEntry = document.createElement("p");
-      logEntry.textContent = message;
-      logContainer.appendChild(logEntry);
-    }
-
-    // Create a room by sending a "create" command to the server
-    function createRoom() {
-      const roomName = document.getElementById("room-input").value;
-      if (roomName) {
-        ws.send(JSON.stringify({ command: "join", roomId: roomName }));
-        currentRoom = roomName;
-        displayLog(`You created and joined room: ${roomName}`);
-      }
-    }
-
-    // Join an existing room by sending a "join" command to the server
-    function joinRoom() {
-      const roomName = document.getElementById("room-input").value;
-      if (roomName) {
-        ws.send(JSON.stringify({ command: "join", roomId: roomName }));
-        currentRoom = roomName;
-        displayLog(`You joined room: ${roomName}`);
-      }
-    }
-
-    // Leave the current room by sending a "leave" command to the server
-    function leaveRoom() {
-      if (currentRoom) {
-        ws.send(JSON.stringify({ command: "leave", roomId: currentRoom }));
-        displayLog(`You left room: ${currentRoom}`);
-        currentRoom = null;
-      }
-    }
-  </script>
 </html>

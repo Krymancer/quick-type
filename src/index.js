@@ -1,104 +1,59 @@
 import http from "http";
-import crypto from "crypto";
-import fs from 'fs';
-import path from 'path';
+import { WebSocket, WebSocketServer } from "ws";
+import { randomUUID } from "crypto";
 
 import { handleStaticFiles } from "./static.js";
-import { decode, encode, generateAcceptValue, clients } from './websocket.js';
-import { broadcastRooms, getRoomByClient, rooms } from "./room.js";
 
 const PORT = 3000;
-const words = ["apple", "banana", "cherry", "date", "elderberry", "fig", "grape", "honeydew"];
 
-const server = http.createServer((request, response) => {
-  let filePath = path.join(process.cwd(), 'public', request.url === '/' ? 'index.html' : request.url);
-  let contentType = 'text/html';
+const server = http.createServer(handleStaticFiles);
 
-  const extname = path.extname(filePath);
+const wss = new WebSocketServer({ server });
 
-  if (!path.extname(filePath)) {
-    filePath = path.join(process.cwd(), 'public', 'room.html');
-  }
+const rooms = [{ id: randomUUID(), name: "room-1234", players: [], capacity: 5 }];
 
-  switch (extname) {
-    case '.js':
-      contentType = 'application/javascript';
-      break;
-    case '.css':
-      contentType = 'text/css';
-      break;
-    case '.png':
-      contentType = 'image/png';
-      break;
-    case '.jpg':
-      contentType = 'image/jpeg';
-      break;
-  }
-
-  fs.readFile(filePath, (err, content) => {
-    if (err) {
-      response.writeHead(404);
-      response.end('404 Not Found');
-    } else {
-      response.writeHead(200, { 'Content-Type': contentType });
-      response.end(content);
+function broadcast(message, sender = null) {
+  wss.clients.forEach((client) => {
+    if (client !== sender && client.readyState === WebSocket.OPEN) {
+      client.send(message);
     }
   });
-});
+}
 
-server.on('upgrade', (request, socket, head) => {
-  if (request.headers['upgrade'] !== 'websocket') {
-    socket.end('HTTP/1.1 400 Bad Request\r\n');
-    return;
-  }
+function broadcastRooms() {
+  const message = JSON.stringify({ type: "room_list", rooms });
+  broadcast(message);
+}
 
-  const acceptKey = request.headers['sec-websocket-key'];
-  const acceptValue = generateAcceptValue(acceptKey);
-  const responseHeaders = [
-    'HTTP/1.1 101 Switching Protocols',
-    'Upgrade: websocket',
-    'Connection: Upgrade',
-    `Sec-WebSocket-Accept: ${acceptValue}`,
-  ];
-  socket.write(responseHeaders.join('\r\n') + '\r\n\r\n');
+function createRoom() {
+  const id = randomUUID();
+  const name = `room-${id.substring(id.length - 4)}`
+  rooms.push({ id, name, capacity: 5, players: [] });
 
-  console.log('connection')
+  broadcastRooms();
+}
 
-  clients.push(socket);
 
-  // Send initial room list to the new client
-  broadcastRooms(socket);
+wss.on('connection', (ws) => {
+  console.log('New client connected');
 
-  socket.on('data', (buffer) => {
-    const message = decode(buffer);
-    if (message) {
-      console.log(`Received message: ${message}`);
+  ws.send(JSON.stringify({ type: "message", message: "Welcome to the server!" }));
 
-      // Parse the message to determine the room command
-      const [command, roomId] = message.split(' ');
+  ws.send(JSON.stringify({ type: "room_list", rooms }));
 
-      if (command === 'join') {
-        joinRoom(roomId, socket);
-        broadcastRooms(); // Update all clients with the latest room list
-      } else if (command === 'leave') {
-        leaveRoom(roomId, socket);
-        broadcastRooms(); // Update all clients with the latest room list
-      } else {
-        // Broadcast within the room only
-        const clientRoom = getRoomByClient(socket);
-        if (clientRoom) {
-          broadcastToRoom(clientRoom.id, message, socket);
-        }
-      }
+  ws.on('message', (message) => {
+    const data = JSON.parse(message);
+
+    if (data.type === "create_room") {
+      createRoom();
     }
+
+    console.log(`Received message from client: ${message}`);
   });
 
-  socket.on('end', () => {
+  ws.on('close', () => {
     console.log('Client disconnected');
-    removeClientFromRooms(socket);
-    broadcastRooms(); // Update all clients with the latest room list after a disconnect
   });
 });
-
 
 server.listen(PORT, () => console.log(`Server running on port ${PORT}`));

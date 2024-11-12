@@ -4,10 +4,15 @@
   "main": "index.js",
   "type": "module",
   "scripts": {
-    "start": "node src/index.js"
+    "start": "node src/index.js",
+    "watch": "node --watch src/index.js"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "description": ""
+  "description": "",
+  "dependencies": {
+    "@types/node": "^22.9.0",
+    "ws": "^8.18.0"
+  }
 }
