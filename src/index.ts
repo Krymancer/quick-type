@@ -1,18 +1,19 @@
 import http from "http";
+import express from "express";
 import { WebSocket, WebSocketServer } from "ws";
 import { randomUUID } from "crypto";
 
-import { handleStaticFiles } from "./static.js";
-
 const PORT = 3000;
 
-const server = http.createServer(handleStaticFiles);
+const app = express();
+app.use(express.static('public'));
+const server = http.createServer(app);
 
 const wss = new WebSocketServer({ server });
 
 const rooms = [{ id: randomUUID(), name: "room-1234", players: [], capacity: 5 }];
 
-function broadcast(message, sender = null) {
+function broadcast(message: string, sender = null) {
   wss.clients.forEach((client) => {
     if (client !== sender && client.readyState === WebSocket.OPEN) {
       client.send(message);
@@ -41,7 +42,7 @@ wss.on('connection', (ws) => {
 
   ws.send(JSON.stringify({ type: "room_list", rooms }));
 
-  ws.on('message', (message) => {
+  ws.on('message', (message: string) => {
     const data = JSON.parse(message);
 
     if (data.type === "create_room") {

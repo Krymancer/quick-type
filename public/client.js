@@ -45,14 +45,17 @@ function makeRoomCard(room) {
   const { name, capacity, players } = room;
   const indicator = `${players.length}/${capacity}`;
 
-  const card = document.createElement('div');
-  card.classList = "p-2 rounded-md flex gap-2 border-1 bg-blue-400";
+  const card = Object.assign(document.createElement('div'), {
+    classList: "p-2 rounded-md flex gap-2 border-1 bg-blue-400",
+  });
 
-  const nameElement = document.createElement('div');
-  nameElement.textContent = name;
+  const nameElement = Object.assign(document.createElement('div'), {
+    textContent: name,
+  });
 
-  const indicatorElement = document.createElement('div');
-  indicatorElement.textContent = indicator;
+  const indicatorElement = Object.assign(document.createElement('div'), {
+    textContent: indicator,
+  });
 
   card.appendChild(nameElement);
   card.appendChild(indicatorElement);
