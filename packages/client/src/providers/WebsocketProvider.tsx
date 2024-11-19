@@ -6,10 +6,10 @@ import {
   useContext,
   ReactNode,
 } from "react";
+import { useQueryClient } from '@tanstack/react-query';
 
 interface WebsocketContextProps {
   ready: boolean;
-  messages: any[];
   send: ((data: string) => void) | undefined;
 }
 
@@ -25,8 +25,8 @@ export const useWebsocket = () => {
 
 export const WebsocketProvider = ({ children }: { children: ReactNode }) => {
   const [isReady, setIsReady] = useState(false);
-  const [messages, setMessages] = useState<any[]>([]);
   const ws = useRef<WebSocket | null>(null);
+  const queryClient = useQueryClient();
 
   useEffect(() => {
     const socket = new WebSocket("ws://localhost:3000/ws");
@@ -36,9 +36,20 @@ export const WebsocketProvider = ({ children }: { children: ReactNode }) => {
 
     socket.onmessage = (event) => {
       try {
-        // Parse the incoming message if it's JSON
         const data = JSON.parse(event.data);
-        setMessages((prevMessages) => [...prevMessages, data]); // Append the new message
+
+        if (data.type === 'room_list') {
+          queryClient.setQueryData(['rooms'], data.rooms);
+        } else if (data.type === 'join_room_sucess') {
+          queryClient.setQueryData(['current_room'], data.room);
+        } else if (data.type === 'join_room_error') {
+          console.error('Failed to join room', data.message);
+        } else if (data.type === 'leave_room_success') {
+          queryClient.setQueryData(['current_room'], null);
+        } else if (data.type === 'leave_room_error') {
+          console.error('Failed to leave room:', data.message);
+        }
+
       } catch (err) {
         console.error("Failed to parse WebSocket message:", err);
       }
@@ -49,13 +60,12 @@ export const WebsocketProvider = ({ children }: { children: ReactNode }) => {
     return () => {
       socket.close();
     };
-  }, []);
+  }, [queryClient]);
 
   const send = ws.current?.send.bind(ws.current);
 
   const contextValue = {
     ready: isReady,
-    messages,
     send,
   };
 
